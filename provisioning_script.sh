@@ -13,4 +13,4 @@ set -eo pipefail
 pip install polars, pandas, catboost
 
 # Clone the Git repository (replace with the actual repo URL)
-git clone https://github.com/your-repo/your-project.git
+git clone https://github.com/Flash1709/vastai.git
