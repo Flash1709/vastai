@@ -317,7 +317,7 @@ def run_in_subprocess(n_gpus, n_samples, queue):
 def main():
     results = []
     # Iterate over different numbers of GPUs and samples.
-    for n_gpus in [1, 2]:
+    for n_gpus in [1, 2, 4]:
         for n_samples in [1_000_000, 10_000_000, 20_000_000, 120_000_000]:
             # Create a queue to get the result back from the process.
             queue = multiprocessing.Queue()
