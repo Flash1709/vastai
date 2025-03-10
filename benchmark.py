@@ -269,7 +269,7 @@ class CatboostBenchmark:
 def main():
 
     
-    bencher = CatboostBenchmark("F:/Data/datasets/dataset.parquet")
+    bencher = CatboostBenchmark("dataset.parquet")
     
     results = []
     
