@@ -10,7 +10,7 @@ set -eo pipefail
 . /venv/main/bin/activate
 
 # Install your packages
-pip install polars, pandas, catboost, numpy
+pip install polars, pandas, catboost, numpy, gputil
 
 # Clone the Git repository (replace with the actual repo URL)
 git clone https://github.com/Flash1709/vastai.git
