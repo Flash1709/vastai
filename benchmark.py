@@ -168,6 +168,8 @@ class CatboostBenchmark:
         y_train = subset[t].cast(pl.Float32).to_numpy()
         w_train = subset[w].cast(pl.Float32).to_numpy() if w else None
 
+        print("train shape:", X_train.shape)
+
         subset = self.df.filter(pl.col("doi").is_in(valid_dois)).filter(pl.col(t).is_not_null())
         X_valid = subset.select(features).cast(pl.Float32).to_numpy()
         y_valid = subset[t].cast(pl.Float32).to_numpy()
@@ -195,6 +197,8 @@ class CatboostBenchmark:
         
         gpu_ids = self.all_gpus[:n_gpus]
         gpu_names = self.all_names[:n_gpus]
+
+        print("Gpus to use:", gpu_ids)
         
         
         params = {
@@ -208,8 +212,8 @@ class CatboostBenchmark:
             "loss_function": "Logloss",
             "eval_metric": "Logloss",
             
-            "iterations": 1000,
-            "learning_rate": 0.005,
+            "iterations": 250,
+            "learning_rate": 0.1,
             "depth": 12,
             "l2_leaf_reg": 10,
             "random_strength": 0.7,
@@ -240,11 +244,14 @@ class CatboostBenchmark:
                 train_time = time() - t0
                 
                 n_iters = model.get_best_iteration()
-                valid_score = model.get_best_score()
+                
+                train_score = model.get_best_score()['learn']["Logloss"]
+                valid_score = model.get_best_score()['validation']["Logloss"]
                             
                 tiny_pred = model.predict_proba(test_tup[0], task_type="CPU")[:, 1]
                 test_score = log_loss(test_tup[1], tiny_pred, sample_weight=test_tup[2])
             except Exception as e:
+                raise e
                 print(f"Exeption! {e}")
                 train_time = None
                 valid_score = None
@@ -254,36 +261,87 @@ class CatboostBenchmark:
         
         
         return {
+            "gpu_ids": gpu_ids,
+            "n_samples": self.n_samples,
             "train_time": train_time,
             "n_iters": n_iters,
-            "n_samples": self.n_samples,
+            "train_score": train_score,
             "valid_score": valid_score,
             "test_score": test_score,
-            "gpu_ids": gpu_ids,
             "gpu_names": gpu_names,
         }
         
         
         
             
-def main():
+import multiprocessing
+import traceback
 
-    
+# Assume CatboostBenchmark is defined/imported from your code base.
+# from your_module import CatboostBenchmark
+
+def run_benchmark(n_gpus, n_samples):
+    """
+    Run a single benchmark. If any Python-level error occurs, it will be caught.
+    """
     bencher = CatboostBenchmark("dataset.parquet")
-    
+    try:
+        res = bencher.run(n_gpus=n_gpus, n_samples=n_samples)
+    except Exception as e:
+        # Log the exception details if needed.
+        print(f"Caught exception in run_benchmark: {e}")
+        # Create a placeholder result dictionary.
+        res = {
+            'gpu_ids': list(range(n_gpus)),
+            'n_samples': n_samples,
+            'error': str(e)
+        }
+    return res
+
+def run_in_subprocess(n_gpus, n_samples, queue):
+    """
+    Run the benchmark in a subprocess. Any uncatchable error (like a C++ segfault)
+    will cause the process to exit with a non-zero status.
+    """
+    try:
+        res = run_benchmark(n_gpus, n_samples)
+    except Exception as e:
+        # This block might not catch C++ errors causing process crashes.
+        res = {
+            'gpu_ids': list(range(n_gpus)),
+            'n_samples': n_samples,
+            'error': f"Exception in subprocess: {e}"
+        }
+    queue.put(res)
+
+def main():
     results = []
-    
+    # Iterate over different numbers of GPUs and samples.
     for n_gpus in [1, 2]:
-        for n_samples in [10_000, 100_000, 1_000_000, 10_000_000, 20_000_000, 120_000_000]:
-            res = bencher.run(n_gpus=n_gpus, n_samples=n_samples)
+        for n_samples in [1_000_000, 10_000_000, 20_000_000, 120_000_000]:
+            # Create a queue to get the result back from the process.
+            queue = multiprocessing.Queue()
+            # Start a subprocess for this benchmark run.
+            p = multiprocessing.Process(target=run_in_subprocess, args=(n_gpus, n_samples, queue))
+            p.start()
+            p.join()  # Wait for the subprocess to finish.
+            
+            # If the subprocess crashes (e.g., due to a C++ error), its exit code will be nonzero.
+            if p.exitcode != 0:
+                print(f"Process for n_gpus={n_gpus}, n_samples={n_samples} crashed with exit code {p.exitcode}.")
+                res = {
+                    'gpu_ids': list(range(n_gpus)),
+                    'n_samples': n_samples,
+                    'error': f"Process crashed with exit code {p.exitcode}"
+                }
+            else:
+                # Retrieve the result from the queue.
+                res = queue.get()
+            
             print(res)
             results.append(res)
-            
-    results = pl.DataFrame(results)
-    
-    results.write_json("benchmark.json")
-    
-    
-    
+            # Save the log after each run.
+            pl.DataFrame(results).write_json("benchmark.json")
+
 if __name__ == "__main__":
     main()
