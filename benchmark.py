@@ -273,8 +273,8 @@ def main():
     
     results = []
     
-    for n_gpus in [1]:
-        for n_samples in [10_000, 100_000, 1_000_000]: #, 10_000_000, 20_000_000, 120_000_000]:
+    for n_gpus in [1, 2]:
+        for n_samples in [10_000, 100_000, 1_000_000, 10_000_000, 20_000_000, 120_000_000]:
             res = bencher.run(n_gpus=n_gpus, n_samples=n_samples)
             print(res)
             results.append(res)
