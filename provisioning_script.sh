@@ -19,3 +19,5 @@ cd vastai
 
 # download dataset
 gdown "https://drive.google.com/uc?id=1r9aWhgK_3yMetmj3I51O1E7krTgCeKx1" --fuzzy
+
+python benchmark.py
