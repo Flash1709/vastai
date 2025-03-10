@@ -23,7 +23,7 @@ def catboost_gpus():
         return [], []
 
     # Create a list of GPU IDs (as strings) for CatBoost
-    gpu_ids = [str(gpu.id) for gpu in gpus]
+    gpu_ids = [int(gpu.id) for gpu in gpus]
     gpu_names = [str(gpu.name) for gpu in gpus]
     
     print("Available GPUs:")
@@ -152,7 +152,7 @@ class CatboostBenchmark:
         valid_dois = self.folds[f_ids.valid_id]
         test_dois = self.folds[f_ids.test_id]
         
-        features = self.df.columns[:-4]
+        features = self.df.columns[:-5]
         t = "target"
         w = "weight"
         
