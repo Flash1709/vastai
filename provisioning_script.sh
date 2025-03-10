@@ -14,3 +14,8 @@ pip install polars, pandas, catboost, numpy, gputil
 
 # Clone the Git repository (replace with the actual repo URL)
 git clone https://github.com/Flash1709/vastai.git
+
+cd /vastai
+
+
+wget "https://www.dropbox.com/scl/fi/1waa6xxf6ym5dykll8u6t/dataset.parquet?rlkey=n9sgb1dp5cqxur4syg6kqetx4&st=axmueg5r&dl=0"
